@@ -96,7 +96,7 @@ export default function DashboardLayout() {
             {sidebarOpen && <span>Profil</span>}
           </NavLink>
 
-          {user?.role === "SUPER_ADMIN" && (
+          {user?.role === "Directeur" && (
             <NavLink to="/dashboard/users" className={navLinkClass}>
               <FaUsers className={sidebarOpen ? "mr-3" : "mx-auto"} size={20} />
               {sidebarOpen && <span>Utilisateurs</span>}

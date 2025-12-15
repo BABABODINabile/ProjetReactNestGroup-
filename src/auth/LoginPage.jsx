@@ -4,6 +4,7 @@ import { useAuthStore } from "../store/auth.store";
 import FormContainer from "../components/FormContainer";
 import FormikInput from "../components/FormikInput";
 import { toast } from "react-toastify";
+import { loginAPI } from "../api/auth";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -20,47 +21,21 @@ export default function LoginPage() {
   };
 
   // Fake API (en attendant Nest.js)
-  const fakeLoginRequest = async (values) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (values.email === "admin@test.com" && values.password === "admin123") {
-          resolve({
-            token: "FAKE_JWT_TOKEN",
-            user: {
-              id: 1,
-              fullname: "Super Admin",
-              email: "admin@test.com",
-              role: "SUPER_ADMIN",
-            },
-          });
-        } else if (values.email === "user@test.com" && values.password === "user123") {
-          resolve({
-            token: "FAKE_JWT_TOKEN",
-            user: {
-              id: 2,
-              fullname: "Utilisateur",
-              email: "user@test.com",
-              role: "USER",
-            },
-          });
-        } else {
-          reject(new Error("Identifiants incorrects"));
-        }
-      }, 600);
-    });
-  };
-
+  
   const handleSubmit = async (values, { setErrors, setSubmitting }) => {
     try {
-      const res = await fakeLoginRequest(values);
+      // *** UTILISATION DE LA VRAIE FONCTION API ***
+      // L'appel réel remplace la fakeLoginRequest
+      const res = await loginAPI(values); 
 
       login({ user: res.user, token: res.token });
       
       toast.success("Connexion réussie !");
-
       navigate("/dashboard", { replace: true });
+      
     } catch (err) {
-      setErrors({ email: "Email ou mot de passe incorrect" });
+      // Capture l'erreur lancée par loginAPI et l'affiche à l'utilisateur
+      setErrors({ email: err.message || "Email ou mot de passe incorrect" });
     }
     setSubmitting(false);
   };
