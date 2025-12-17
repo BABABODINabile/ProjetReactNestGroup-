@@ -47,7 +47,7 @@ export default React.memo(function CategoriesTable({ data = [], onEdit, refresh,
       doc.text("Liste des catégories", 14, 20);
 
       // Build rows
-      const rows = (data || []).map((d) => [d.nom ?? "", d.type ?? ""]);
+      const rows = (data || []).map((d) => [d.name ?? "", d.type ?? ""]);
 
       // autoTable will render the table starting after the title
       // @ts-ignore - autoTable is attached to jsPDF by the import
@@ -68,9 +68,9 @@ export default React.memo(function CategoriesTable({ data = [], onEdit, refresh,
   }, [data]);
 
   // Mémoriser la fonction de suppression
-  const deleteRow = useCallback(async (id, nom) => {
+  const deleteRow = useCallback(async (id, name) => {
     const r = await Swal.fire({
-      title: `Supprimer ${nom} ?`,
+      title: `Supprimer ${name} ?`,
       text: "Cette catégorie sera supprimée définitivement.",
       icon: "warning",
       showCancelButton: true,
@@ -83,7 +83,7 @@ export default React.memo(function CategoriesTable({ data = [], onEdit, refresh,
       try {
         await deleteCategory(id);
         refresh();
-        Swal.fire("Supprimé !", `La catégorie ${nom} a été supprimée.`, "success");
+        Swal.fire("Supprimé !", `La catégorie ${name} a été supprimée.`, "success");
       } catch (error) {
         // Gestion d'erreur améliorée
         Swal.fire("Erreur", "La suppression a échoué. Veuillez réessayer.", "error");
@@ -100,14 +100,14 @@ export default React.memo(function CategoriesTable({ data = [], onEdit, refresh,
         icon={<FaPencilAlt/>}
         className="w-10 h-10 flex items-center justify-center rounded bg-white text-blue-600 border border-blue-600 hover:bg-blue-700 hover:text-white transition-colors shadow-none"
         onClick={() => onEdit(row)}
-        aria-label={`Modifier ${row.nom}`}
+        aria-label={`Modifier ${row.name}`}
         tooltip="Modifier"
       />
       <Button
         icon={<FaTrashAlt />}
         className="w-10 h-10 flex items-center justify-center rounded bg-white text-red-600 border border-red-600 hover:bg-red-700 hover:text-white transition-colors shadow-none"
-        onClick={() => deleteRow(row.id, row.nom)} // Passage du nom pour l'UX
-        aria-label={`Supprimer ${row.nom}`}
+        onClick={() => deleteRow(row.id, row.name)} // Passage du name pour l'UX
+        aria-label={`Supprimer ${row.name}`}
         tooltip="Supprimer"
       />
     </div>
@@ -201,7 +201,7 @@ export default React.memo(function CategoriesTable({ data = [], onEdit, refresh,
         showGridlines={false}
         responsiveLayout="scroll"
         header={header}
-        globalFilterFields={["nom", "type"]} 
+        globalFilterFields={["name", "type"]} 
         filters={filters}
         emptyMessage={loading ? "⏳ Chargement..." : "📭 Aucune catégorie trouvée."}
         className="w-full"
@@ -209,7 +209,7 @@ export default React.memo(function CategoriesTable({ data = [], onEdit, refresh,
         paginatorClassName="bg-gray-50 border-t border-gray-200"
       >
         <Column 
-          field="nom" 
+          field="name" 
           header="Nom" 
           sortable
           headerClassName="bg-blue-600 text-white text-lg font-bold text-center"

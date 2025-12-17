@@ -1,24 +1,34 @@
-let categories = [
-  { id: 1, nom: "Fournitures", type: "Dépense" },
-  { id: 2, nom: "Ventes", type: "Recette" },
-];
+// categories.service.js
+import { useAuthStore } from "../../store/auth.store";
 
-export function getCategories() {
-  return Promise.resolve(categories);
-}
+const API_URL = "http://localhost:3000/categories";
 
-export function addCategory(data) {
-  const newItem = { id: Date.now(), ...data };
-  categories.push(newItem);
-  return Promise.resolve(newItem);
-}
+const apiRequest = async (endpoint, options = {}) => {
+  const token = useAuthStore.getState().token;
 
-export function updateCategory(id, data) {
-  categories = categories.map((c) => (c.id === id ? { ...c, ...data } : c));
-  return Promise.resolve(true);
-}
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers,
+  };
 
-export function deleteCategory(id) {
-  categories = categories.filter((c) => c.id !== id);
-  return Promise.resolve(true);
-}
+  const response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+
+  if (!response.ok) {
+    // Si 500, on récupère le message exact du serveur NestJS
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Erreur serveur");
+  }
+
+  // Très important pour la suppression (204 No Content)
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return null;
+  }
+
+  return response.json();
+};
+
+export const getCategories = () => apiRequest("");
+export const addCategory = (data) => apiRequest("", { method: "POST", body: JSON.stringify(data) });
+export const updateCategory = (id, data) => apiRequest(`/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+export const deleteCategory = (id) => apiRequest(`/${id}`, { method: "DELETE" });

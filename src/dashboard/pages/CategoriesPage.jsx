@@ -30,12 +30,19 @@ export default function CategoriesPage() {
   };
 
   const handleSubmit = async (values) => {
-    if (editing) await updateCategory(editing.id, values);
-    else await addCategory(values);
-
+  try {
+    if (editing) {
+      await updateCategory(editing.id, values);
+    } else {
+      await addCategory(values);
+    }
     setShowModal(false);
-    loadData();
-  };
+    loadData(); // Rafraîchit la table
+  } catch (error) {
+    // Ici tu gères l'erreur 403 (Si le rôle n'est pas DIRECTEUR)
+    alert(`Erreur: ${error.message}`);
+  }
+};
 
   return (
     <div>
@@ -67,7 +74,7 @@ export default function CategoriesPage() {
         title={editing ? "Modifier catégorie" : "Ajouter catégorie"}
       >
       <CategoryForm
-          initialValues={editing || { nom: "", type: "Dépense" }}
+          initialValues={editing || { name: "", type: "Dépense" }}
           onSubmit={handleSubmit}
           onClose={() => setShowModal(false)}
       />

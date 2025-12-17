@@ -5,7 +5,7 @@ import FormikSelect from "../../components/FormikSelect";
 
 export default function CategoryForm({ initialValues, onSubmit, onClose }) {
   const schema = Yup.object({
-    nom: Yup.string().required("Nom obligatoire"),
+    name: Yup.string().required("Nom obligatoire"),
     type: Yup.string().oneOf(["Dépense", "Recette"]).required("Type obligatoire"),
   });
 
@@ -13,7 +13,7 @@ export default function CategoryForm({ initialValues, onSubmit, onClose }) {
     <Formik initialValues={initialValues} validationSchema={schema} onSubmit={onSubmit}>
       <Form className="space-y-4">
 
-        <FormikInput name="nom" label="Nom de la catégorie" />
+        <FormikInput name="name" label="Nom de la catégorie" />
 
         <FormikSelect
           name="type"

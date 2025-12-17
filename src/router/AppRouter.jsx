@@ -38,7 +38,7 @@ export default function AppRouter() {
         <Route
           path="users"
           element={
-            <RoleGuard allowedRoles={["SUPER_ADMIN"]}>
+            <RoleGuard allowedRoles={["Directeur"]}>
               <RolePermissionPage />
             </RoleGuard>
           }
