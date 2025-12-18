@@ -10,7 +10,7 @@ import Swal from "sweetalert2";
 import { deleteCategory } from "./categories.service"; 
 import { FaPencilAlt, FaTrashAlt, FaFilePdf,FaFileDownload} from "react-icons/fa";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 // Utilisation des alias pour les classes Pi (PrimeIcons) pour la clarté
 const PI_UPLOAD = 'pi pi-upload';
@@ -26,7 +26,7 @@ export default React.memo(function CategoriesTable({ data = [], onEdit, refresh,
 
   // Les options de type ne changeront jamais, pas besoin de les mémoriser.
   const TYPE_OPTIONS = [
-    { label: "Tous les types", value: null }, // Mieux que "Tous" pour l'UX
+    { label: "Tous les types", value:"Dépense"|"Recette" }, // Mieux que "Tous" pour l'UX
     { label: "Dépense", value: "Dépense" },
     { label: "Recette", value: "Recette" },
     { label: "Mixte", value: "Mixte" },
@@ -38,26 +38,26 @@ export default React.memo(function CategoriesTable({ data = [], onEdit, refresh,
   }, []);
 
   // Export PDF using jsPDF + autoTable
-  const exportPdf = useCallback(() => {
+    const exportPdf = useCallback(() => {
     try {
       const doc = new jsPDF();
 
-      // Title
+      // Titre
       doc.setFontSize(14);
       doc.text("Liste des catégories", 14, 20);
 
-      // Build rows
+      // Préparation des lignes (on utilise bien .name ici comme attendu par ton backend)
       const rows = (data || []).map((d) => [d.name ?? "", d.type ?? ""]);
 
-      // autoTable will render the table starting after the title
-      // @ts-ignore - autoTable is attached to jsPDF by the import
-      doc.autoTable({
+      // APPEL CORRIGÉ : On passe 'doc' en premier argument
+      autoTable(doc, {
         head: [["Nom", "Type"]],
         body: rows,
         startY: 26,
         styles: { fontSize: 10 },
         headStyles: { fillColor: [22, 78, 99], halign: 'center' },
         theme: 'grid',
+        columnStyles:{}
       });
 
       doc.save("categories.pdf");
@@ -194,7 +194,7 @@ export default React.memo(function CategoriesTable({ data = [], onEdit, refresh,
         ref={dt}
         value={data}
         paginator
-        rows={10}
+        rows={5}
         rowsPerPageOptions={[5, 10, 20, 50]}
         loading={loading} 
         stripedRows
@@ -203,7 +203,7 @@ export default React.memo(function CategoriesTable({ data = [], onEdit, refresh,
         header={header}
         globalFilterFields={["name", "type"]} 
         filters={filters}
-        emptyMessage={loading ? "⏳ Chargement..." : "📭 Aucune catégorie trouvée."}
+        emptyMessage={loading ? " Chargement..." : " Aucune catégorie trouvée."}
         className="w-full"
         tableClassName="text-sm"
         paginatorClassName="bg-gray-50 border-t border-gray-200"

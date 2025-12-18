@@ -31,7 +31,7 @@ export default function AppRouter() {
         {/* Sous-pages du dashboard */}
         <Route index element={<DashboardHome />} />
         <Route path="categories" element={<CategoriesPage />} />
-        <Route path="transactions" element={<TransactionsPage />} />
+        <Route path="transactions" element={<TransactionsPage/>} />
         <Route path="profile" element={<ProfilePage />} />
 
         {/* Page réservée au super admin */}

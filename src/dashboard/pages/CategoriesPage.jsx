@@ -4,6 +4,7 @@ import CategoriesTable from "../../features/categories/CategoriesTable";
 import CategoryForm from "../../features/categories/CategoryForm";
 import Modal from "../../components/Modal";
 import { FaPlus, FaFolderOpen } from "react-icons/fa";
+import { toast } from "react-toastify";
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState([]);
@@ -29,20 +30,28 @@ export default function CategoriesPage() {
     setShowModal(true);
   };
 
-  const handleSubmit = async (values) => {
-  try {
-    if (editing) {
-      await updateCategory(editing.id, values);
-    } else {
-      await addCategory(values);
+    const handleSubmit = async (values) => {
+    try {
+      // On extrait les champs que NestJS refuse (id, dates) 
+      // et on garde le reste dans une variable "payload"
+      const { id, created_at, updated_at, ...payload } = values;
+
+      if (editing) {
+        // On envoie l'ID pour l'URL, mais seulement le payload dans le corps de la requête
+        await updateCategory(editing.id, payload);
+      } else {
+        // Pour l'ajout, on envoie aussi le payload nettoyé
+        await addCategory(payload);
+      }
+
+      setShowModal(false);
+      loadData(); 
+      toast.success(editing ? "Catégorie modifiée !" : "Catégorie ajoutée !", { position: "top-center" });
+    } catch (error) {
+      // Gestion propre de l'erreur renvoyée par le ValidationPipe de NestJS
+      toast.error(`Erreur: ${error.message}`, { position: "top-center" });
     }
-    setShowModal(false);
-    loadData(); // Rafraîchit la table
-  } catch (error) {
-    // Ici tu gères l'erreur 403 (Si le rôle n'est pas DIRECTEUR)
-    alert(`Erreur: ${error.message}`);
-  }
-};
+  };
 
   return (
     <div>

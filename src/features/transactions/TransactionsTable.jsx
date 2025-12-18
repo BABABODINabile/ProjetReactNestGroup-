@@ -35,9 +35,8 @@ export default function TransactionsTable({ data = [], loading = false, onEdit, 
     { label: "Recette", value: "Recette" },
   ];
 
-  const CATEGORY_OPTIONS = useMemo(() => [{ label: "Toutes catégories", value: null }, ...categories.map((c) => ({ label: c.nom, value: c.id }))], [categories]);
+  const CATEGORY_OPTIONS = useMemo(() => [{ label: "Toutes catégories", value:null|"" }, ...categories.map((c) => ({ label: c.name, value: c.id }))], [categories]);
 
-  // Compute filtered data locally so the DataTable shows only matching rows
   const filteredData = useMemo(() => {
     if (!data || !data.length) return [];
 
@@ -48,35 +47,36 @@ export default function TransactionsTable({ data = [], loading = false, onEdit, 
     const endDate = Array.isArray(dateRange) && dateRange[1] ? new Date(dateRange[1]).setHours(23,59,59,999) : null;
 
     return data.filter((row) => {
-      // Type filter
+      // 1. Correction Filtre Type
       if (filterType && row.type !== filterType) return false;
 
-      // Category filter (category id or categoryId)
+      // 2. Correction Filtre Catégorie (vérifie les deux formats de clés)
       if (filterCategory) {
-        const cid = row.category?.id ?? row.categoryId ?? null;
-        if (cid !== filterCategory) return false;
+        const cid = row.category?.id ?? row.category_id ?? row.categoryId;
+        if (Number(cid) !== Number(filterCategory)) return false;
       }
 
-      // Amount range
+      // 3. Correction Montant (Cast systématique en Number)
       const amt = Number(row.amount || 0);
-      if (minAmount != null && !Number.isNaN(minAmount) && amt < Number(minAmount)) return false;
-      if (maxAmount != null && !Number.isNaN(maxAmount) && amt > Number(maxAmount)) return false;
+      if (minAmount != null && amt < minAmount) return false;
+      if (maxAmount != null && amt > maxAmount) return false;
 
-      // Date range
+      // 4. Correction Date (Utilise transaction_date ou date)
+      const rowDateRaw = row.transaction_date || row.date;
       if (startDate || endDate) {
-        const d = row.date ? new Date(row.date).getTime() : null;
-        if (d == null) return false;
+        if (!rowDateRaw) return false;
+        const d = new Date(rowDateRaw).getTime();
         if (startDate && d < startDate) return false;
         if (endDate && d > endDate) return false;
       }
 
-      // Global text search across several fields
+      // 5. Recherche Globale (Inclusion du champ 'user')
       if (hasGlobal) {
         const fieldsToSearch = [
           row.description || "",
           row.type || "",
-          row.createdBy?.fullname || "",
-          (row.category && row.category.nom) || row.categoryId || "",
+          row.user?.fullname || row.createdBy?.fullname || "",
+          row.category?.nom || "",
           String(row.id || "")
         ];
         const hay = fieldsToSearch.join(" ").toLowerCase();
@@ -91,16 +91,18 @@ export default function TransactionsTable({ data = [], loading = false, onEdit, 
 
   const exportPdf = useCallback(() => {
     try {
-      generateTransactionListPDF(data, "transactions.pdf");
+      generateTransactionListPDF(filteredData, "transactions.pdf");
+      toast.success("Export PDF généré avec succès !", { position: "top-center" });
     } catch (err) {
       console.error(err);
       Swal.fire("Erreur", "L'export PDF a échoué.", "error");
     }
-  }, [data]);
+  }, [filteredData]);
 
   const exportReceipt = useCallback((transaction) => {
     try {
       generateReceiptPDF(transaction, true);
+      toast.success("Reçu téléchargé avec succès !", { position: "top-center" });
     } catch (err) {
       console.error(err);
       Swal.fire("Erreur", "La génération du reçu a échoué.", "error");
@@ -114,12 +116,12 @@ export default function TransactionsTable({ data = [], loading = false, onEdit, 
     setDateRange(null);
     setMinAmount(null);
     setMaxAmount(null);
-    toast.info("Filtres réinitialisés", { autoClose: 1500,position: "top-center"});
+    toast.info("Filtres réinitialisés", { autoClose: 1500, position: "top-center" });
   }, []);
 
-  const deleteRow = useCallback(async (row) => {
+  const deleteRow = useCallback(async (id) => {
     const r = await Swal.fire({
-      title: `Supprimer la transaction ${row.id} ?`,
+      title: `Supprimer la transaction ${id} ?`,
       text: "Cette action est irréversible.",
       icon: "warning",
       showCancelButton: true,
@@ -129,9 +131,9 @@ export default function TransactionsTable({ data = [], loading = false, onEdit, 
     });
     if (r.isConfirmed) {
       try {
-        await onDelete(row.id);
+        await onDelete(id);
         refresh();
-        Swal.fire("Supprimé !", `Transaction ${row.id} supprimée.`, "success");
+        Swal.fire("Supprimé !", `Transaction supprimée.`, "success");
       } catch (err) {
         console.error(err);
         Swal.fire("Erreur", "Impossible de supprimer.", "error");
@@ -151,14 +153,12 @@ export default function TransactionsTable({ data = [], loading = false, onEdit, 
           icon={<FaPencilAlt/>}
           className="w-10 h-10 flex items-center justify-center rounded bg-white text-blue-600 border border-blue-600 hover:bg-blue-700 hover:text-white transition-colors shadow-none"
           onClick={() => onEdit(row)}
-          aria-label={`Modifier ${row.nom}`}
           tooltip="Modifier"
         />
         <Button
           icon={<FaTrashAlt />}
           className="w-10 h-10 flex items-center justify-center rounded bg-white text-red-500 border border-red-500 hover:bg-red-500 hover:text-white transition-colors shadow-none"
-          onClick={() => deleteRow(row.id, row.nom)} // Passage du nom pour l'UX
-          aria-label={`Supprimer ${row.nom}`}
+          onClick={() => deleteRow(row.id)} 
           tooltip="Supprimer"
         />
         <Button  
@@ -174,8 +174,9 @@ export default function TransactionsTable({ data = [], loading = false, onEdit, 
     return <span className={`px-3 py-1 rounded-full text-sm font-semibold ${cfg.bg} ${cfg.text}`}>{cfg.sign} {row.type}</span>;
   }, []);
 
+  // REGLE L'ERREUR .toFixed()
   const amountBody = useCallback((row) => (
-    <div className="font-mono">{(row.amount || 0).toFixed(2)} €</div>
+    <div className="font-mono">{Number(row.amount || 0).toFixed(2)} FCFA</div>
   ), []);
 
   const attachmentBody = useCallback((row) => (
@@ -192,9 +193,8 @@ export default function TransactionsTable({ data = [], loading = false, onEdit, 
         <div className="flex items-center gap-3">
           <Button 
             label="CSV" 
-            icon={<FaFileDownload 
-            className="mr-2" />} 
-            className="bg-teal-400 text-white px-4 py-2 rounded hover:bg-cyan-600 transition-colors active:scale-90" // Changer p-button-plain pour p-button-primary/secondary
+            icon={<FaFileDownload className="mr-2" />} 
+            className="bg-teal-400 text-white px-4 py-2 rounded hover:bg-cyan-600 transition-colors active:scale-90"
             onClick={exportCsv} 
           />
           <Button label="PDF" icon={<FaFilePdf className="mr-2" />} className="bg-red-700 text-white px-4 py-2 rounded" onClick={exportPdf} />
@@ -203,7 +203,6 @@ export default function TransactionsTable({ data = [], loading = false, onEdit, 
             label="Réinitialiser" 
             icon={<FaUndo className="mr-2" />} 
             className="w-auto p-3 h-10 flex items-center justify-center rounded bg-white text-indigo-600 border border-indigo-600 hover:bg-indigo-600 hover:text-white transition-colors shadow-none"
-
             onClick={clearFilters} 
           />
           <Dropdown 
@@ -211,14 +210,14 @@ export default function TransactionsTable({ data = [], loading = false, onEdit, 
             options={TYPE_OPTIONS} 
             onChange={(e) => setFilterType(e.value)} 
             placeholder="Type" 
-            className="w-48 h-12 shadow-none border rounded px-3  hover:border-blue-500 focus:ring-2 focus:ring-blue-500"
+            className="w-48 h-12 shadow-none border rounded px-3 hover:border-blue-500 focus:ring-2 focus:ring-blue-500"
           />
           <Dropdown 
             value={filterCategory} 
             options={CATEGORY_OPTIONS} 
             onChange={(e) => setFilterCategory(e.value)} 
             placeholder="Catégorie" 
-            className="w-48 h-12 shadow-none border rounded px-3  hover:border-blue-500 focus:ring-2 focus:ring-blue-500"
+            className="w-48 h-12 shadow-none border rounded px-3 hover:border-blue-500 focus:ring-2 focus:ring-blue-500"
           />
           <InputNumber 
             value={minAmount}
@@ -275,13 +274,18 @@ export default function TransactionsTable({ data = [], loading = false, onEdit, 
         tableClassName="text-sm"
       >
         <Column field="id" header="ID" style={{ minWidth: '5rem' }} headerClassName="bg-blue-600 text-white text-lg font-bold text-center" />
-        <Column field="date" header="Date" body={(r) => new Date(r.date).toLocaleDateString()} headerClassName="bg-blue-600 text-white text-lg font-bold text-center" sortable />
+        <Column 
+          header="Date" 
+          body={(r) => new Date(r.transaction_date || r.date).toLocaleDateString()} 
+          headerClassName="bg-blue-600 text-white text-lg font-bold text-center" 
+          sortable 
+        />
         <Column field="type" header="Type" body={typeBody} sortable style={{ minWidth: '8rem' }} headerClassName="bg-blue-600 text-white text-lg font-bold text-center" />
-        <Column field="category" header="Catégorie" body={(r) => r.category?.nom ?? r.categoryId} headerClassName="bg-blue-600 text-white text-lg font-bold text-center" sortable  />
+        <Column header="Catégorie" body={(r) => r.category?.name ?? r.category_id ?? r.categoryId} headerClassName="bg-blue-600 text-white text-lg font-bold text-center" sortable  />
         <Column field="amount" header="Montant" body={amountBody} sortable style={{ minWidth: '8rem' }} headerClassName="bg-blue-600 text-white text-lg font-bold text-center" />
         <Column field="description" header="Description" body={(r) => <div className="truncate max-w-[30ch]">{r.description}</div>} headerClassName="bg-blue-600 text-white text-lg font-bold text-center" />
         <Column field="attachment" header="Pièce" body={attachmentBody} style={{ minWidth: '6rem' }} headerClassName="bg-blue-600 text-white text-lg font-bold text-center" />
-        <Column field="createdBy" header="Enregistré par" body={(r) => r.createdBy?.fullname} headerClassName="bg-blue-600 text-white text-lg font-bold text-center" />
+        <Column header="Enregistré par" body={(r) => r.user?.firstname + " " + r.user?.name || r.createdBy?.name || "Inconnu"} headerClassName="bg-blue-600 text-white text-lg font-bold text-center" />
         <Column header="Actions" body={actionBody} style={{ minWidth: '10rem' }} headerClassName="bg-blue-600 text-white text-lg font-bold text-center" />
       </DataTable>
     </div>

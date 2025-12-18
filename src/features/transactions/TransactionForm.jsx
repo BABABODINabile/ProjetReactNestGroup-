@@ -57,7 +57,7 @@ export default function TransactionForm({ initialValues, onSubmit, onClose }) {
                 <FormikSelect
                   name="categoryId"
                   label="Catégorie"
-                  options={categories.map((c) => ({ value: c.id, label: c.nom }))}
+                  options={categories.map((c) => ({ value: c.id, label: c.name }))}
                 />
               </div>
 
