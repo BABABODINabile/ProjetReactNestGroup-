@@ -10,7 +10,7 @@ import DashboardHome from "../dashboard/pages/DashboardHome";
 import CategoriesPage from "../dashboard/pages/CategoriesPage";
 import TransactionsPage from "../dashboard/pages/TransactionsPage";
 import ProfilePage from "../dashboard/pages/ProfilePage";
-import RolePermissionPage from "../dashboard/pages/UsersPage";
+import UsersPage from "../dashboard/pages/UsersPage";
 
 export default function AppRouter() {
   return (
@@ -39,7 +39,7 @@ export default function AppRouter() {
           path="users"
           element={
             <RoleGuard allowedRoles={["Directeur"]}>
-              <RolePermissionPage />
+              <UsersPage />
             </RoleGuard>
           }
         />

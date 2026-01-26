@@ -62,7 +62,7 @@ export default function TransactionForm({ initialValues, onSubmit, onClose }) {
               </div>
 
               <div>
-                <FormikInput name="amount" label="Montant (FCFA)" type="number" step="0.01" />
+                <FormikInput name="amount" label="Montant (FCFA)" type="number" step="0.01" min="0" max="999999999" />
                 <p className="text-xs text-gray-400 mt-1">Saisissez le montant en francs CFA.</p>
               </div>
 

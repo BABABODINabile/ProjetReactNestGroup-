@@ -264,7 +264,7 @@ export default function TransactionsTable({ data = [], loading = false, onEdit, 
         ref={dt}
         value={filteredData}
         paginator
-        rows={10}
+        rows={5}
         rowsPerPageOptions={[5,10,20,50]}
         loading={loading}
         stripedRows

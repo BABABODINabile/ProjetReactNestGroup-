@@ -1,289 +1,205 @@
-
-
-
 import { useState } from "react";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import { useAuthStore } from "../../store/auth.store";
 import FormikInput from "../../components/FormikInput";
-import { FaUser, FaEnvelope, FaShieldAlt, FaCog, FaCamera, FaSave } from "react-icons/fa";
+import { FaUser, FaShieldAlt, FaCamera, FaSave, FaLock } from "react-icons/fa";
 import Swal from "sweetalert2";
 
-/**
- * ProfilePage - Page de gestion du profil utilisateur
- * Affiche les informations utilisateur et permet de les éditer
- */
 export default function ProfilePage() {
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
 
-  const [activeTab, setActiveTab] = useState("info"); // "info" | "security" | "settings"
-  const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState("info");
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [isEditingPass, setIsEditingPass] = useState(false);
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-gray-500 text-lg">Chargement du profil...</p>
-      </div>
-    );
-  }
+  if (!user) return <div className="p-10 text-center text-gray-500">Chargement...</div>;
 
-  // Initiales de l'utilisateur
-  const initials = user.fullname
-    ? user.fullname
-        .split(" ")
-        .map((part) => part[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : "U";
+  // Calcul des initiales basé sur Name et Firstname
+  const initials = `${user.name?.[0] || ""}${user.firstname?.[0] || ""}`.toUpperCase() || "U";
 
-  // Configuration des rôles avec couleurs
-  const roleConfig = {
-    SUPER_ADMIN: { label: "Super Admin", color: "text-purple-600", bgColor: "bg-purple-100", borderColor: "border-purple-500" },
-    ADMIN: { label: "Admin", color: "text-blue-600", bgColor: "bg-blue-100", borderColor: "border-blue-500" },
-    USER: { label: "Utilisateur", color: "text-green-600", bgColor: "bg-green-100", borderColor: "border-green-500" },
-  };
-  const role = roleConfig[user.role] || roleConfig.USER;
-
-  // Schéma de validation Formik
-  const validationSchema = Yup.object({
-    fullname: Yup.string().min(3, "Minimum 3 caractères").required("Nom obligatoire"),
-    email: Yup.string().email("Email invalide").required("Email obligatoire"),
-  });
-
-  // Handle submit du formulaire
-  const handleSubmit = async (values) => {
+  // Mise à jour des informations (Nom, Prénom, Email)
+  const handleUpdateInfo = async (values) => {
     try {
-      updateUser(values);
-      setIsEditing(false);
-      Swal.fire({
-        icon: "success",
-        title: "Profil mis à jour",
-        text: "Vos informations ont été sauvegardées.",
-        timer: 2000,
-        showConfirmButton: false,
-      });
+      await updateUser(values);
+      setIsEditingInfo(false);
+      Swal.fire({ icon: "success", title: "Profil mis à jour", timer: 1500, showConfirmButton: false });
     } catch (error) {
-      Swal.fire("Erreur", "La mise à jour a échoué.", "error");
+      Swal.fire("Erreur", "Impossible de mettre à jour le profil", "error");
+    }
+  };
+
+  // Mise à jour du mot de passe
+  const handleUpdatePassword = async (values, { resetForm }) => {
+    try {
+      // Appel de la nouvelle fonction du store
+      await useAuthStore.getState().updatePassword({
+        oldPassword: values.oldPassword,
+        newPassword: values.newPassword
+      });
+      
+      setIsEditingPass(false);
+      resetForm();
+      Swal.fire({ icon: "success", title: "Mot de passe modifié" });
+    } catch (error) {
+      Swal.fire("Erreur", error.message, "error");
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center gap-4">
-        <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg hover:scale-105 transition-transform">
-          <FaUser className="text-white text-3xl" />
-        </div>
-        <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
-            Mon Profil
-          </h1>
-          <p className="text-gray-500 mt-1">Gérez vos informations personnelles et vos paramètres</p>
-        </div>
-      </div>
+    <div className="max-w-6xl mx-auto p-4 lg:p-8 space-y-6">
+      {/* Header */}
+     <div className="flex items-center gap-3">
+               <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg hover:scale-105 transition-transform ">
+                 <FaUser className="text-white text-2xl" />
+               </div>
+               <div>
+                 <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">Mon Profil</h1>
+                 <p className="text-sm text-gray-500 mt-1">Gestion du profil</p>
+               </div>
+             </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* LEFT COLUMN - Avatar Card */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-3xl shadow-lg border border-gray-200 p-6 text-center">
-            {/* Avatar */}
-            <div className="relative inline-block mb-4">
-              <div className={`w-32 h-32 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-5xl shadow-lg border-4 ${role.borderColor}`}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Colonne Gauche : Avatar */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+            <div className="relative inline-block">
+              <div className="w-32 h-32 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-4xl font-bold border-4 border-white shadow-sm">
                 {initials}
               </div>
-              <button className="absolute bottom-0 right-0 p-3 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors border-2 border-blue-500">
-                <FaCamera className="text-blue-600 text-lg" />
+              <button className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow border border-gray-200 text-blue-600 hover:text-blue-700">
+                <FaCamera size={14} />
               </button>
             </div>
-
-            {/* Infos */}
-            <h2 className="text-2xl font-bold text-gray-800 mt-4">{user.fullname}</h2>
-            <p className="text-gray-500 mt-1">{user.email}</p>
-
-            {/* Role Badge */}
-            <div className={`mt-4 inline-block px-4 py-2 rounded-full font-semibold ${role.bgColor} ${role.color}`}>
-              {role.label}
-            </div>
-
-            {/* Stats */}
-            <div className="mt-6 pt-6 border-t border-gray-200 space-y-3">
-              <div>
-                <p className="text-sm text-gray-500">ID Utilisateur</p>
-                <p className="font-semibold text-gray-800">{user.id}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Statut</p>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                  <span className="font-semibold text-green-600">Actif</span>
-                </div>
-              </div>
+            <h2 className="mt-4 text-xl font-bold text-gray-800">{user.name} {user.firstname}</h2>
+            <p className="text-gray-500 text-sm">{user.email}</p>
+            <div className="mt-4 inline-block px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full uppercase tracking-wider">
+              {user.role || "Utilisateur"}
             </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN - Tabs & Form */}
+        {/* Colonne Droite : Tabs & Formulaires */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-3xl shadow-lg border border-gray-200 overflow-hidden">
-            {/* Tabs */}
-            <div className="flex border-b border-gray-200 bg-gray-50">
-              <button
-                onClick={() => setActiveTab("info")}
-                className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center gap-2 justify-center ${
-                  activeTab === "info"
-                    ? "text-blue-600 border-b-2 border-blue-600 bg-white"
-                    : "text-gray-600 hover:text-gray-800"
-                }`}
-              >
-                <FaUser size={16} /> Informations
-              </button>
-
-              <button
-                onClick={() => setActiveTab("security")}
-                className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center gap-2 justify-center ${
-                  activeTab === "security"
-                    ? "text-blue-600 border-b-2 border-blue-600 bg-white"
-                    : "text-gray-600 hover:text-gray-800"
-                }`}
-              >
-                <FaShieldAlt size={16} /> Sécurité
-              </button>
-
-              <button
-                onClick={() => setActiveTab("settings")}
-                className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center gap-2 justify-center ${
-                  activeTab === "settings"
-                    ? "text-blue-600 border-b-2 border-blue-600 bg-white"
-                    : "text-gray-600 hover:text-gray-800"
-                }`}
-              >
-                <FaCog size={16} /> Paramètres
-              </button>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="flex border-b border-gray-100">
+              {["info", "security"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => { setActiveTab(tab); setIsEditingInfo(false); setIsEditingPass(false); }}
+                  className={`flex-1 py-4 text-sm font-semibold capitalize transition-colors ${
+                    activeTab === tab ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {tab === "info" ? "Informations" : "Sécurité"}
+                </button>
+              ))}
             </div>
 
-            {/* Tab Content */}
-            <div className="p-8">
-              {/* TAB: Informations */}
+            <div className="p-6">
+              {/* ONGLET : INFORMATIONS */}
               {activeTab === "info" && (
-                <div>
+                <div className="animate-fadeIn">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-gray-800">Informations personnelles</h3>
-                    {!isEditing && (
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-                      >
+                    <h3 className="text-lg font-bold text-gray-800">Détails personnels</h3>
+                    {!isEditingInfo && (
+                      <button onClick={() => setIsEditingInfo(true)} className="text-sm text-blue-600 font-semibold hover:underline">
                         Modifier
                       </button>
                     )}
                   </div>
 
-                  {isEditing ? (
+                  {isEditingInfo ? (
                     <Formik
-                      initialValues={{ fullname: user.fullname, email: user.email }}
-                      validationSchema={validationSchema}
-                      onSubmit={handleSubmit}
+                      initialValues={{ name: user.name, firstname: user.firstname, email: user.email }}
+                      validationSchema={Yup.object({
+                        name: Yup.string().required("Requis"),
+                        firstname: Yup.string().required("Requis"),
+                        email: Yup.string().email("Invalide").required("Requis"),
+                      })}
+                      onSubmit={handleUpdateInfo}
                     >
-                      {({ isSubmitting }) => (
-                        <Form className="space-y-4">
-                          <FormikInput name="fullname" label="Nom complet" placeholder="Votre nom" />
-                          <FormikInput name="email" label="Email" type="email" placeholder="votre@email.com" />
-
-                          <div className="flex gap-3 pt-4">
-                            <button
-                              type="submit"
-                              disabled={isSubmitting}
-                              className="flex-1 px-4 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 justify-center disabled:opacity-50"
-                            >
-                              <FaSave size={16} /> Enregistrer
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setIsEditing(false)}
-                              className="flex-1 px-4 py-3 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 transition-colors"
-                            >
-                              Annuler
-                            </button>
-                          </div>
-                        </Form>
-                      )}
+                      <Form className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormikInput name="name" label="Nom" />
+                          <FormikInput name="firstname" label="Prénom" />
+                        </div>
+                        <FormikInput name="email" label="Adresse Email" type="email" />
+                        <div className="flex gap-2 pt-2">
+                          <button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2">
+                            <FaSave size={14} /> Enregistrer
+                          </button>
+                          <button type="button" onClick={() => setIsEditingInfo(false)} className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-semibold">
+                            Annuler
+                          </button>
+                        </div>
+                      </Form>
                     </Formik>
                   ) : (
-                    <div className="space-y-4">
-                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <p className="text-sm text-gray-600">Nom complet</p>
-                        <p className="text-lg font-semibold text-gray-800">{user.fullname}</p>
+                    <div className="grid gap-4">
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">Nom complet</p>
+                        <p className="text-gray-800 font-medium">{user.name} {user.firstname}</p>
                       </div>
-                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <p className="text-sm text-gray-600">Email</p>
-                        <p className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                          <FaEnvelope className="text-blue-600" /> {user.email}
-                        </p>
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">Email</p>
+                        <p className="text-gray-800 font-medium">{user.email}</p>
                       </div>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* TAB: Sécurité */}
+              {/* ONGLET : SÉCURITÉ */}
               {activeTab === "security" && (
-                <div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-6">Paramètres de sécurité</h3>
-                  <div className="space-y-4">
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 flex items-start gap-3">
-                      <FaShieldAlt className="text-blue-600 text-xl mt-1" />
-                      <div>
-                        <p className="font-semibold text-gray-800">Mot de passe</p>
-                        <p className="text-sm text-gray-600 mt-1">Changez régulièrement votre mot de passe pour plus de sécurité</p>
-                        <button className="mt-3 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                          Changer le mot de passe
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-green-50 rounded-lg border border-green-200 flex items-start gap-3">
-                      <div className="w-3 h-3 bg-green-500 rounded-full mt-1"></div>
-                      <div>
-                        <p className="font-semibold text-gray-800">Authentification à deux facteurs</p>
-                        <p className="text-sm text-gray-600 mt-1">Protégez votre compte avec une couche de sécurité supplémentaire</p>
-                        <button className="mt-3 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors text-sm">
-                          Activer 2FA
-                        </button>
-                      </div>
-                    </div>
+                <div className="animate-fadeIn">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-bold text-gray-800">Sécurité du compte</h3>
+                    {!isEditingPass && (
+                      <button onClick={() => setIsEditingPass(true)} className="text-sm text-blue-600 font-semibold hover:underline">
+                        Changer le mot de passe
+                      </button>
+                    )}
                   </div>
-                </div>
-              )}
 
-              {/* TAB: Paramètres */}
-              {activeTab === "settings" && (
-                <div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-6">Préférences</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <div>
-                        <p className="font-semibold text-gray-800">Notifications par email</p>
-                        <p className="text-sm text-gray-600 mt-1">Recevez des mises à jour importantes</p>
+                  {isEditingPass ? (
+                    <Formik
+                      initialValues={{ oldPassword: "", newPassword: "", confirmPassword: "" }}
+                      validationSchema={Yup.object({
+                        oldPassword: Yup.string().required("Requis"),
+                        newPassword: Yup.string().min(6, "6 caractères min.").required("Requis"),
+                        confirmPassword: Yup.string().oneOf([Yup.ref('newPassword')], "Mots de passe différents").required("Requis"),
+                      })}
+                      onSubmit={handleUpdatePassword}
+                    >
+                      <Form className="space-y-4">
+                        <FormikInput name="oldPassword" label="Ancien mot de passe" type="password" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormikInput name="newPassword" label="Nouveau mot de passe" type="password" />
+                          <FormikInput name="confirmPassword" label="Confirmer" type="password" />
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <button type="submit" className="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2">
+                            <FaLock size={14} /> Mettre à jour
+                          </button>
+                          <button type="button" onClick={() => setIsEditingPass(false)} className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-semibold">
+                            Annuler
+                          </button>
+                        </div>
+                      </Form>
+                    </Formik>
+                  ) : (
+                    <div className="p-6 border border-gray-100 rounded-xl bg-gray-50 flex items-center gap-4">
+                      <div className="p-3 bg-white rounded-full shadow-sm">
+                        <FaShieldAlt className="text-blue-600 text-xl" />
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                      </label>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                       <div>
-                        <p className="font-semibold text-gray-800">Mode sombre</p>
-                        <p className="text-sm text-gray-600 mt-1">Activer le thème sombre</p>
+                        <p className="text-gray-800 font-semibold">Votre mot de passe est protégé</p>
+                        <p className="text-sm text-gray-500">Dernière modification :</p>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                      </label>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
