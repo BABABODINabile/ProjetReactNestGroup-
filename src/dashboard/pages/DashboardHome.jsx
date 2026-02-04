@@ -262,6 +262,7 @@ export default function DashboardHome() {
             Répartition des Dépenses
           </h3>
           <div className="h-80 w-full">
+            {stats.pieChart && stats.pieChart.length > 0 ? 
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -284,8 +285,9 @@ export default function DashboardHome() {
                 </Pie>
                 <Tooltip />
                 <Legend />
-              </PieChart>
+              </PieChart> 
             </ResponsiveContainer>
+            : <div className="text-center text-gray-500">Aucune donnée disponible</div>}
           </div>
         </div>
       </div>
